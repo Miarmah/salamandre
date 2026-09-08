@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="header-row">
+  <div>
+    <h1 class="page-title">Playlists</h1>
+    <p class="page-sub">{{ playlists|length }} playlist{{ 's' if playlists|length != 1 else '' }}</p>
+  </div>
+  <button class="icon-btn filled" onclick="document.getElementById('create-playlist-modal').style.display='flex'">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+  </button>
+</div>
+
+{% if playlists %}
+<div>
+  {% for p in playlists %}
+  <a class="playlist-card" href="{{ url_for('playlist_detail', playlist_id=p['id']) }}">
+    <div class="playlist-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.2" fill="currentColor"/><circle cx="3.5" cy="12" r="1.2" fill="currentColor"/><circle cx="3.5" cy="18" r="1.2" fill="currentColor"/></svg>
+    </div>
+    <div>
+      <div class="playlist-name">{{ p['name'] }}</div>
+      <div class="playlist-count">{{ p['track_count'] }} morceau{{ 'x' if p['track_count'] != 1 else '' }}</div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <svg width="70" height="70" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><circle cx="3.5" cy="6" r="1.2" fill="currentColor"/><circle cx="3.5" cy="12" r="1.2" fill="currentColor"/><circle cx="3.5" cy="18" r="1.2" fill="currentColor"/></svg>
+  <div class="empty-title">Aucune playlist</div>
+  <div class="empty-sub">Créez votre première playlist en appuyant sur +</div>
+  <button class="btn" style="width:auto; padding:14px 24px; margin-top:6px;" onclick="document.getElementById('create-playlist-modal').style.display='flex'">
+    + Créer une playlist
+  </button>
+</div>
+{% endif %}
+
+<div class="modal-backdrop" id="create-playlist-modal" style="display:none;" onclick="if(event.target===this) this.style.display='none'">
+  <div class="modal-sheet">
+    <div class="modal-title">Nouvelle playlist</div>
+    <form method="POST" action="{{ url_for('create_playlist') }}">
+      <div class="field">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>
+        <input type="text" name="name" placeholder="Nom de la playlist" required autofocus>
+      </div>
+      <button type="submit" class="btn">Créer</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

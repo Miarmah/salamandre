@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+<h1 class="page-title">Recherche</h1>
+<p class="page-sub">Trouvez vos morceaux</p>
+
+<div class="field" style="margin-bottom:20px;">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  <input type="text" id="search-input" placeholder="Rechercher un morceau..." oninput="doSearch(this.value)" autofocus>
+</div>
+
+<div class="track-list" id="search-results"></div>
+<p class="empty-sub" id="search-empty" style="text-align:center; color:var(--muted); margin-top:30px;">Tapez pour rechercher dans votre bibliothèque.</p>
+
+<script>
+let searchTimer;
+window.searchResultsTracks = [];
+function doSearch(q){
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => runSearch(q), 200);
+}
+function runSearch(q){
+  const empty = document.getElementById('search-empty');
+  const results = document.getElementById('search-results');
+  if(!q.trim()){
+    results.innerHTML = '';
+    empty.style.display = 'block';
+    empty.textContent = 'Tapez pour rechercher dans votre bibliothèque.';
+    return;
+  }
+  fetch('/api/search?q=' + encodeURIComponent(q))
+    .then(r => r.json())
+    .then(items => {
+      window.searchResultsTracks = items;
+      if(items.length === 0){
+        results.innerHTML = '';
+        empty.style.display = 'block';
+        empty.textContent = 'Aucun résultat pour "' + q + '".';
+        return;
+      }
+      empty.style.display = 'none';
+      results.innerHTML = items.map((t, idx) => `
+        <div class="track-card">
+          <button class="track-play ${t.cover ? 'has-cover' : ''}" ${t.cover ? `style="background-image:url('/covers/${t.cover}');"` : ''}
+                  onclick="playQueueItem(window.searchResultsTracks, ${idx})">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <div class="track-info">
+            <div class="track-title">${t.title}</div>
+            <div class="track-sub">Audio Importé</div>
+          </div>
+        </div>
+      `).join('');
+    });
+}
+</script>
+{% endblock %}

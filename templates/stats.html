@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="header-row">
+  <div>
+    <a href="{{ url_for('settings') }}" style="color:var(--muted); font-size:13px; font-weight:700; text-decoration:none;">&larr; Paramètres</a>
+    <h1 class="page-title" style="font-size:30px;">Statistiques</h1>
+    <p class="page-sub">Vos habitudes d'écoute</p>
+  </div>
+  <a class="icon-btn filled" href="{{ url_for('export_stats_csv') }}" title="Exporter en CSV">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+  </a>
+</div>
+
+<div style="display:flex; gap:12px; margin-bottom:22px;">
+  <div class="settings-card" style="flex-direction:column; align-items:flex-start; gap:2px;">
+    <div class="settings-sub">Morceaux</div>
+    <div style="font-family:'Baloo 2',sans-serif; font-size:24px; font-weight:800; color:var(--green);">{{ totals['track_count'] }}</div>
+  </div>
+  <div class="settings-card" style="flex-direction:column; align-items:flex-start; gap:2px;">
+    <div class="settings-sub">Écoutes</div>
+    <div style="font-family:'Baloo 2',sans-serif; font-size:24px; font-weight:800; color:var(--green);">{{ totals['total_plays'] }}</div>
+  </div>
+  <div class="settings-card" style="flex-direction:column; align-items:flex-start; gap:2px;">
+    <div class="settings-sub">Playlists</div>
+    <div style="font-family:'Baloo 2',sans-serif; font-size:24px; font-weight:800; color:var(--green);">{{ playlist_count }}</div>
+  </div>
+</div>
+
+<p class="settings-section-title">Titres les plus écoutés</p>
+{% if top_tracks %}
+<div style="display:flex; flex-direction:column; gap:12px;">
+  {% for t in top_tracks %}
+  <div class="track-card" style="flex-direction:column; align-items:stretch; gap:8px;">
+    <div style="display:flex; align-items:center; gap:10px;">
+      <span style="font-family:'Baloo 2',sans-serif; font-weight:800; color:var(--muted); width:22px;">#{{ loop.index }}</span>
+      <div class="track-info">
+        <div class="track-title">{{ t['title'] }}</div>
+      </div>
+      <span style="font-weight:800; color:var(--green); font-size:14px;">{{ t['play_count'] }} écoute{{ 's' if t['play_count'] != 1 else '' }}</span>
+    </div>
+    <div style="height:8px; background:var(--bg-soft); border-radius:4px; overflow:hidden;">
+      <div style="height:100%; width:{{ (t['play_count'] / max_plays * 100) if max_plays else 0 }}%; background:var(--green-bright); border-radius:4px;"></div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state" style="padding: 20px 0;">
+  <div class="empty-title">Pas encore de données</div>
+  <div class="empty-sub">Écoutez des morceaux pour voir vos statistiques apparaître ici.</div>
+</div>
+{% endif %}
+{% endblock %}

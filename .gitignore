@@ -1,0 +1,22 @@
+# Environnement virtuel
+venv/
+bin/
+include/
+lib/
+lib64/
+pyvenv.cfg
+
+# Fichiers de configuration IDE
+.vscode/
+.idea/
+
+# Base de données locale et fichiers téléversés
+*.db
+i_music.db
+static/uploads/*
+!static/uploads/.gitkeep
+templates/songs
+
+# Byte-code Python
+__pycache__/
+*.py[cod]

@@ -1,0 +1,15 @@
+{
+  "songs": [
+    { "id": 1, "title": "Someone like you", "artist": "Adele", "category": "etrangere", "file": "songs/Adele.wav" },
+    { "id": 2, "title": "Havaoziko ny eny", "artist": "Ambondrona", "category": "malagasy", "file": "songs/Havaoziko.wav" },
+    { "id": 3, "title": "Antso", "artist": "Ambondrona", "category": "malagasy", "file": "songs/Antso.wav" },
+    { "id": 4, "title": "Talkin' to the moon", "artist": "Bruno Mars", "category": "etrangere", "file": "songs/Bruno_mars.wav" },
+    { "id": 5, "title": "Hira faneva 'sucré' (Instrumental)", "artist": "ISPM", "category": "malagasy", "file": "songs/Sucre.wav" },
+    { "id": 6, "title": "Tsodrano", "artist": "Dadah Rabel", "category": "malagasy", "file": "songs/Tsodrano.wav" },
+    { "id": 7, "title": "Androany aloha", "artist": "Henika", "category": "malagasy", "file": "songs/Androany_aloha.wav" },
+    { "id": 8, "title": "Eo an-kianja", "artist": "Joseph D'Af", "category": "malagasy", "file": "songs/Eo_an_kianja.wav" },
+    { "id": 9, "title": "Mahatoky loatra", "artist": "Pepe Shine", "category": "malagasy", "file": "songs/Mahatoky_loatra.wav" },
+    { "id": 10, "title": "Shape of you", "artist": "Ed Sheeran", "category": "etrangere", "file": "songs/Shape_of_you.wav" },
+    { "id": 11, "title": "Love Story", "artist": "Indila", "category": "etrangere", "file": "songs/Love_story.wav" }
+  ]
+}

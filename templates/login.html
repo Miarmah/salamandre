@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<div style="padding-top: 20px;">
+  <a href="{{ url_for('onboarding') }}" class="icon-btn" style="margin-bottom:30px;">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+  </a>
+
+  <div style="text-align:center; margin-bottom:26px;">
+    <div class="logo-badge" style="width:80px;height:80px;border-radius:22px;">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+    </div>
+    <h1 style="font-family:'Baloo 2',sans-serif; font-size:30px; font-weight:800; color:var(--green); margin:0;">Connexion</h1>
+    <p style="color:var(--muted); margin-top:6px;">Content de vous revoir !</p>
+  </div>
+
+  {% if error %}<div class="error-box">{{ error }}</div>{% endif %}
+  {% if just_created %}<div class="error-box" style="background:var(--green-pale); color:var(--green);">Compte créé ! Vous pouvez vous connecter.</div>{% endif %}
+
+  <form method="POST">
+    <div class="field">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z" opacity="0"/><path d="M4 4h16v16H4z"/><polyline points="4 4 12 13 20 4"/></svg>
+      <input type="text" name="identifier" placeholder="Email ou Utilisateur" required>
+    </div>
+    <div class="field">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      <input type="password" name="password" id="pwd" placeholder="Mot de passe" required>
+      <button type="button" class="eye-toggle" onclick="togglePwd('pwd', this)">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
+    <p style="text-align:right; margin: -6px 0 20px;"><a class="link" style="font-size:13.5px;">Mot de passe oublié ?</a></p>
+
+    <button type="submit" class="btn">
+      Se connecter
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+    </button>
+  </form>
+  <p style="text-align:center; color:var(--muted); margin-top:18px;">Pas de compte ? <a class="link" href="{{ url_for('signup') }}">S'inscrire</a></p>
+</div>
+{% endblock %}

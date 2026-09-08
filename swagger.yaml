@@ -1,0 +1,223 @@
+# I-Music 2.0 — Documentation OpenAPI
+# Livre 2.0, Chapitre 4.1 §"Choisir et documenter un contrat d'API unique"
+
+openapi: 3.0.3
+info:
+  title: I-Music API
+  description: >
+    API REST du Back-End I-Music 2.0 : authentification, catalogue de
+    chansons, analyse harmonique asynchrone, playlists et favoris
+    (session en cours, sans base de données persistante).
+  version: "2.0.0"
+
+servers:
+  - url: http://localhost:5000
+    description: Serveur de développement
+
+tags:
+  - name: Auth
+  - name: Songs
+  - name: Jobs
+  - name: Playlists
+  - name: Favorites
+
+paths:
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Créer un compte utilisateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, email, password]
+              properties:
+                username: { type: string }
+                email: { type: string, format: email }
+                password: { type: string, format: password, minLength: 8 }
+      responses:
+        "201": { description: Compte créé }
+        "400": { description: Données invalides }
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Authentifier un utilisateur
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        "200":
+          description: Connexion réussie
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token: { type: string }
+                  refresh_token: { type: string }
+                  user: { type: object }
+        "401": { description: Identifiants invalides }
+
+  /api/auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Renouveler l'access token à partir du refresh token
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Nouvel access token émis }
+
+  /api/songs:
+    get:
+      tags: [Songs]
+      summary: Lister les chansons du catalogue
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+          description: Recherche par titre ou artiste
+      responses:
+        "200": { description: Liste des chansons }
+
+  /api/songs/upload:
+    post:
+      tags: [Songs]
+      summary: Importer un fichier audio personnel
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "201": { description: Fichier importé }
+        "400": { description: Fichier invalide }
+
+  /api/songs/{id}/analyse/start:
+    get:
+      tags: [Songs]
+      summary: Lancer l'analyse d'une chanson du catalogue (asynchrone)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "202": { description: Tâche d'analyse mise en file d'attente (job_id) }
+        "404": { description: Chanson non trouvée }
+
+  /api/uploads/{id}/analyse/start:
+    get:
+      tags: [Songs]
+      summary: Lancer l'analyse d'un fichier importé (asynchrone)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "202": { description: Tâche d'analyse mise en file d'attente (job_id) }
+        "403": { description: Accès refusé à ce fichier }
+        "404": { description: Fichier introuvable }
+
+  /api/jobs/{job_id}:
+    get:
+      tags: [Jobs]
+      summary: Récupérer le statut/résultat d'une tâche d'analyse
+      parameters:
+        - in: path
+          name: job_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Statut de la tâche
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [queued, processing, done, failed] }
+                  progress: { type: number }
+                  step: { type: string }
+                  result: { type: object, nullable: true }
+        "404": { description: Tâche inconnue }
+
+  /api/playlists:
+    get:
+      tags: [Playlists]
+      summary: Lister les playlists de la session en cours
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Liste des playlists }
+    post:
+      tags: [Playlists]
+      summary: Créer une playlist
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string }
+      responses:
+        "201": { description: Playlist créée }
+
+  /api/favorites:
+    get:
+      tags: [Favorites]
+      summary: Lister les favoris de la session en cours
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Liste des favoris }
+    post:
+      tags: [Favorites]
+      summary: Ajouter un favori
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [song_id]
+              properties:
+                song_id: { type: string }
+      responses:
+        "201": { description: Favori ajouté }
+
+  /api/favorites/{song_id}:
+    delete:
+      tags: [Favorites]
+      summary: Retirer un favori
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: song_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Favori retiré }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="onboarding">
+  <div class="logo-badge">
+    <svg width="46" height="46" viewBox="0 0 24 24" fill="white"><path d="M9 18V6l10 6-10 6z"/></svg>
+  </div>
+  <h1 class="onb-title">I-Music</h1>
+  <div class="divider"></div>
+  <p class="onb-tag">Le nouveau son de Madagascar</p>
+  <p class="onb-tag2">Votre bibliothèque audio personnelle</p>
+
+  <div class="onb-features">
+    <div class="onb-feature">
+      <div class="circle">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5 12 3l9 6.5V21H3z"/></svg>
+      </div>
+      Bibliothèque
+    </div>
+    <div class="onb-feature">
+      <div class="circle">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+      </div>
+      Favoris
+    </div>
+    <div class="onb-feature">
+      <div class="circle">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>
+      </div>
+      Playlists
+    </div>
+  </div>
+
+  <a class="btn" href="{{ url_for('login') }}" style="margin-bottom:16px;">
+    Commencer l'aventure
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+  </a>
+  <p style="color:var(--muted); font-size:14px;">Pas encore de compte ? <a class="link" href="{{ url_for('signup') }}">Créer un compte</a></p>
+</div>
+{% endblock %}
