@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="analysis-container">
+    <header class="analysis-header">
+        <h1 id="songTitle">Analyse en cours...</h1>
+        <div class="meta-info">
+            <span id="globalTempo" class="badge">Tempo: -- BPM</span>
+            <span id="globalKey" class="badge">Tonalité globale: --</span>
+        </div>
+    </header>
+
+    <div class="player-controls">
+        <audio id="audioPlayer" controls></audio>
+    </div>
+
+    <!-- Conteneur principal de la timeline -->
+    <div class="timeline-wrapper" id="timelineWrapper">
+        <div class="playhead" id="playhead"></div>
+        
+        <div class="timeline-track" id="keyTrack">
+            <div class="track-label">Tonalités</div>
+            <div class="track-content" id="keyContent"></div>
+        </div>
+        
+        <div class="timeline-track" id="chordTrack">
+            <div class="track-label">Accords</div>
+            <div class="track-content" id="chordContent"></div>
+        </div>
+    </div>
+    
+    <div class="tempo-curve-container">
+        <h3>Courbe de Tempo (Dynamique)</h3>
+        <canvas id="tempoCanvas" width="800" height="150"></canvas>
+    </div>
+</div>
+{% endblock %}

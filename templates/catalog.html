@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="catalog-container">
+    <header class="catalog-header">
+        <h1>Catalogue Musical</h1>
+        <p>Sélectionnez une piste pour lancer l'analyse harmonique et rythmique.</p>
+    </header>
+    
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Rechercher une chanson, un artiste...">
+    </div>
+
+    <div class="song-grid" id="songGrid">
+        <!-- Rempli dynamiquement via app.js -->
+    </div>
+</div>
+{% endblock %}
