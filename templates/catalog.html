@@ -1,17 +1,52 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="catalog-container">
-    <header class="catalog-header">
-        <h1>Catalogue Musical</h1>
-        <p>Sélectionnez une piste pour lancer l'analyse harmonique et rythmique.</p>
-    </header>
-    
-    <div class="search-bar">
-        <input type="text" id="searchInput" placeholder="Rechercher une chanson, un artiste...">
-    </div>
-
-    <div class="song-grid" id="songGrid">
-        <!-- Rempli dynamiquement via app.js -->
-    </div>
+<div class="header-row">
+  <div>
+    <h1 class="page-title">Catalogue</h1>
+    <p class="page-sub">{{ songs|length }} chanson{{ 's' if songs|length != 1 else '' }} · malagasy &amp; étrangères</p>
+  </div>
 </div>
+
+<div class="catalog-search">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+  <input type="text" id="catalogSearch" placeholder="Rechercher un titre ou un artiste…">
+</div>
+
+{% if songs %}
+<div class="song-grid">
+  {% for song in songs %}
+  <div class="song-card"
+       data-id="{{ song.id }}"
+       data-title="{{ song.title }}"
+       data-artist="{{ song.artist }}"
+       data-src="{{ url_for('static', filename=song.file) }}">
+    <div class="cover-placeholder">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 18V6l10 6-10 6z"/></svg>
+    </div>
+    <span class="song-category-badge {{ 'cat-mg' if song.category == 'malagasy' else 'cat-etr' }}">
+      {{ 'Malagasy' if song.category == 'malagasy' else 'Étrangère' }}
+    </span>
+    <div class="song-info">
+      <h3 class="song-title" title="{{ song.title }}">{{ song.title }}</h3>
+      <p class="song-artist">{{ song.artist }}</p>
+    </div>
+    <div class="song-card-actions">
+      <button class="btn small song-play-btn" onclick="playCatalogCard(this)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        Écouter
+      </button>
+      <button class="btn small outline" onclick="window.location.href='{{ url_for('timeline_page', id=song.id) }}'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 3 5-7"/></svg>
+        Analyser
+      </button>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-title">Aucune chanson dans le catalogue</div>
+  <div class="empty-sub">Vérifiez que BD_songs.json est bien présent à la racine du projet.</div>
+</div>
+{% endif %}
 {% endblock %}

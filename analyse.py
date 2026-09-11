@@ -37,12 +37,6 @@ TARGET_SAMPLE_RATE = 22050
 
 
 def _preprocess(path: str):
-    """
-    Charge et prétraite un fichier audio (Livre 2.0, Chapitre 2.2 §3) :
-      - ré-échantillonnage à un taux fixe (22050 Hz),
-      - normalisation du volume,
-      - suppression des silences en tête et en fin de piste.
-    """
     y, sr = librosa.load(path, sr=TARGET_SAMPLE_RATE)
     y = librosa.util.normalize(y)
     y_trimmed, _ = librosa.effects.trim(y, top_db=30)
@@ -50,14 +44,6 @@ def _preprocess(path: str):
 
 
 def _dynamic_tempo(y, sr):
-    """
-    Estime une courbe de tempo dans le temps plutôt qu'une seule valeur
-    scalaire (Livre 2.0, Chapitre 2.2 §1), afin de détecter les
-    variations de tempo (rubato, breaks).
-
-    Retourne (tempo_global, tempo_curve) où tempo_curve est une liste de
-    valeurs de tempo local échantillonnées régulièrement dans le temps.
-    """
     tempo_global, _ = librosa.beat.beat_track(y=y, sr=sr)
 
     onset_env = librosa.onset.onset_strength(y=y, sr=sr)
@@ -71,20 +57,6 @@ def _dynamic_tempo(y, sr):
 
 
 def analyse_song(path: str, use_source_separation: bool = False):
-    """
-    Analyse un fichier audio pour en extraire le tempo, la tonalité
-    (avec détection de modulation) et la timeline d'accords lissée.
-
-    Retourne un dictionnaire directement sérialisable en JSON, conforme
-    au contrat d'API décrit au Livre 2.0, Chapitre 4.1 :
-
-        {
-          "tempo": 92.0,
-          "tempo_curve": [...],
-          "key": [{"start": 0.0, "end": 96.0, "key": "Do majeur"}, ...],
-          "timeline": [{"start": 0.0, "end": 1.6, "chord": "C"}, ...]
-        }
-    """
     if librosa is None:
         return {"error": "librosa n'est pas installé sur ce serveur."}
 

@@ -488,3 +488,132 @@ button {
   body{ padding:0; }
   .phone{ width:100vw; min-height:100vh; max-height:none; border-radius:0; box-shadow:none; }
 
+
+/* ===========================================================================
+   Catalogue (page /catalog) — grille des 11 chansons
+   =========================================================================== */
+.catalog-search{
+  display:flex; align-items:center; gap:10px;
+  background: var(--card); border-radius: var(--radius-pill);
+  padding: 12px 16px; margin-bottom: 16px; box-shadow: var(--shadow);
+}
+.catalog-search input{
+  border:none; outline:none; background:transparent; width:100%;
+  font-size:14.5px; color:var(--ink); font-family:'Nunito Sans',sans-serif;
+}
+.catalog-search svg{ color:var(--muted); flex-shrink:0; }
+
+.song-grid{
+  display:grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-top: 4px;
+  padding-bottom: 20px;
+}
+.song-card{
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  box-shadow: var(--shadow);
+  display:flex; flex-direction:column; gap:8px;
+  position:relative;
+  transition: transform .15s ease;
+}
+.song-card:hover{ transform: translateY(-3px); }
+.song-card .cover-placeholder{
+  height: 92px; border-radius: 14px; margin-bottom:0;
+  background: linear-gradient(135deg, var(--green) 0%, var(--green-deep) 100%);
+  color:#fff; display:flex; align-items:center; justify-content:center;
+  font-size: 30px;
+}
+.song-category-badge{
+  position:absolute; top:14px; right:14px;
+  font-size: 10.5px; font-weight:800; letter-spacing:.3px;
+  padding: 4px 9px; border-radius: var(--radius-pill);
+  background: var(--green-pale); color: var(--green);
+}
+.song-category-badge.cat-etr{ background: #FBE9D9; color:#B2703A; }
+[data-theme="dark"] .song-category-badge.cat-etr{ background:#3a2e20; color:#e0ab73; }
+
+.song-info{ min-height: 48px; }
+.song-title{
+  font-family:'Baloo 2',sans-serif; font-weight:800; font-size:14.5px; margin:0 0 2px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.song-artist{ margin:0; color:var(--muted); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+.song-card-actions{ display:flex; gap:6px; margin-top:2px; }
+.song-card-actions .btn.small{
+  flex:1; padding:9px 6px; font-size:11.5px; gap:5px; border-radius: 12px;
+}
+
+/* ===========================================================================
+   Page Timeline (/timeline) — bandeau d'analyse audio
+   =========================================================================== */
+.analysis-container{ padding-bottom: 24px; }
+.meta-info .badge{
+  display:inline-block; background: var(--green-pale); color: var(--green);
+  font-size:12px; font-weight:800; padding:6px 12px; border-radius: var(--radius-pill);
+  margin-right:8px;
+}
+.action-row{ display:flex; gap:10px; margin: 6px 0 18px; }
+.action-row .btn{ flex:1; }
+
+.analysis-progress{ margin: 4px 0 20px; }
+.progress-track{
+  height:8px; border-radius:999px; background:#d9d2c0; overflow:hidden;
+}
+[data-theme="dark"] .progress-track{ background:#3a4536; }
+.progress-fill{
+  height:100%; border-radius:999px;
+  background: linear-gradient(90deg, var(--green) 0%, var(--green-bright) 100%);
+  transition: width .35s ease;
+}
+.progress-step{ color:var(--muted); font-size:13px; margin:8px 0 0; text-align:center; }
+
+.section-title{
+  font-family:'Baloo 2',sans-serif; font-size:16px; font-weight:800; color:var(--green);
+  margin: 22px 0 10px;
+}
+.tempo-curve-container{
+  background: var(--card); border-radius: var(--radius-md); padding: 12px;
+  box-shadow: var(--shadow);
+}
+
+.timeline-wrapper{
+  position:relative;
+  background: var(--card);
+  border-radius: var(--radius-md);
+  padding: 14px 0;
+  box-shadow: var(--shadow);
+  overflow-x:auto;
+}
+.timeline-track{ position:relative; height:46px; display:flex; align-items:center; }
+.track-label{
+  width:64px; flex-shrink:0; font-size:11.5px; font-weight:800; color:var(--muted);
+  padding-left:14px; text-transform:uppercase; letter-spacing:.4px;
+}
+.track-content{ position:relative; flex:1; height:34px; margin-right:14px; border-radius:10px; overflow:hidden; background:var(--bg-soft); }
+.timeline-segment{
+  position:absolute; top:0; height:100%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:10.5px; font-weight:800; color:#fff;
+  overflow:hidden; white-space:nowrap; text-overflow:ellipsis; padding:0 3px;
+  cursor:pointer; box-sizing:border-box; border-right:1px solid rgba(0,0,0,.12);
+  transition: filter .15s ease, transform .15s ease;
+}
+.timeline-segment:hover{ filter: brightness(1.12); }
+.timeline-segment.active-segment{
+  filter: brightness(1.25); transform: scaleY(1.08);
+  box-shadow: 0 0 0 2px var(--green-bright) inset;
+  z-index: 2;
+}
+.playhead{
+  position:absolute; top:0; bottom:0; left:0; width:2px;
+  background: var(--red); pointer-events:none;
+  transition: left .08s linear;
+  z-index: 3;
+  box-shadow: 0 0 6px rgba(226,87,76,.7);
+}
+
+.hint{ text-align:center; }

@@ -517,137 +517,326 @@ function persistOrder(playlistId, list){
   }).catch(()=>{});
 }
 
-// Constantes
-const API_SONGS = '/api/songs';
-const PIXELS_PER_SECOND = 50; // Échelle de la timeline
 
+// ---------------------------------------------------------------------------
+// Catalogue (11 chansons) — écouter / analyser une chanson depuis la grille
+// ---------------------------------------------------------------------------
+function playCatalogCard(btn){
+  const card = btn.closest('.song-card');
+  if(!card) return;
+  const id = parseInt(card.dataset.id, 10);
+  const title = card.dataset.title;
+  const src = card.dataset.src;
+  playQueueItem([{ id: `cat-${id}`, title, filename: null, cover: null, _directSrc: src }], 0);
+}
+
+// playQueueItem() calls playCurrentQueueItem() -> loadAndPlay(id, audioUrl(filename), ...)
+// Les chansons du catalogue ont déjà une URL complète (pas un simple nom de
+// fichier dans static/uploads), donc on adapte playCurrentQueueItem pour ce cas.
+const _originalPlayCurrentQueueItem = playCurrentQueueItem;
+playCurrentQueueItem = function(){
+  const t = queue[queueIndex];
+  if(!t) return;
+  const src = t._directSrc ? t._directSrc : audioUrl(t.filename);
+  loadAndPlayDirect(t.id, src, t.title, t.cover);
+};
+
+function loadAndPlayDirect(id, src, title, cover){
+  ensureAudioGraph();
+  if(audioCtx.state === 'suspended') audioCtx.resume();
+
+  const isNewTrack = currentTrackId !== id;
+  currentTrackId = id;
+  currentTitle = title;
+  currentCover = cover || null;
+
+  if(isNewTrack){
+    audio.src = src;
+    audio.play().catch(()=>{});
+    if(typeof id === 'number'){
+      fetch(`/track/${id}/play`, { method: 'POST' }).catch(()=>{});
+    }
+  } else if(audio.paused){
+    audio.play().catch(()=>{});
+  } else {
+    audio.pause();
+  }
+
+  localStorage.setItem('imusic_last_track', JSON.stringify({id, src, title, cover: currentCover}));
+  updateMiniPlayer();
+  updateCoverArt();
+}
+
+function playCatalogSong(id, title, src){
+  playQueueItem([{ id: `cat-${id}`, title, filename: null, cover: null, _directSrc: src }], 0);
+  syncListenButton();
+}
+
+function syncListenButton(){
+  const icon = document.getElementById('listenBtnIcon');
+  const label = document.getElementById('listenBtnLabel');
+  if(!icon || !label) return;
+  const playing = !audio.paused && !audio.ended && audio.src;
+  icon.innerHTML = playing
+    ? '<path d="M6 4h4v16H6zM14 4h4v16h-4z"/>'
+    : '<path d="M8 5v14l11-7z"/>';
+  label.textContent = playing ? 'Pause' : 'Écouter';
+}
+audio.addEventListener('play', syncListenButton);
+audio.addEventListener('pause', syncListenButton);
+
+// ---------------------------------------------------------------------------
+// Timeline d'analyse — lancement asynchrone + rendu synchronisé à la lecture
+// ---------------------------------------------------------------------------
+const CHORD_COLORS = {
+  '': '#43D97D', 'm': '#3C5C42', '7': '#E2A83C', 'maj7': '#5B8DEF',
+  'm7': '#2C4531', 'dim': '#9C4C4C', 'aug': '#B25CE2', 'sus2': '#3FB6C9', 'sus4': '#3F8FC9',
+};
+function chordColor(label){
+  if(!label || label === '...' ) return '#9C9484';
+  const m = label.match(/^[A-G]#?(.*)$/);
+  const quality = m ? m[1] : '';
+  return CHORD_COLORS[quality] || '#43D97D';
+}
+
+let currentAnalysis = null; // { tempo, tempo_curve, key: [...], timeline: [...] }
+let currentSongDuration = 0;
+let timelineSyncRaf = null;
+
+async function startAnalysis(songId){
+  const analyseBtn = document.getElementById('analyseBtn');
+  const progressBox = document.getElementById('analysisProgress');
+  const progressFill = document.getElementById('progressFill');
+  const progressStep = document.getElementById('progressStep');
+  const results = document.getElementById('resultsSection');
+
+  if(analyseBtn) { analyseBtn.disabled = true; analyseBtn.style.opacity = '0.6'; }
+  if(progressBox) progressBox.style.display = 'block';
+  if(results) results.style.display = 'none';
+  if(progressFill) progressFill.style.width = '4%';
+  if(progressStep) progressStep.textContent = "Envoi de la demande d'analyse…";
+
+  try{
+    const startRes = await fetch(`/api/songs/${songId}/analyse/start`);
+    const startData = await startRes.json();
+    if(!startRes.ok || !startData.job_id){
+      throw new Error(startData.error || "Impossible de démarrer l'analyse.");
+    }
+    pollJobStatus(startData.job_id);
+  }catch(err){
+    if(progressStep) progressStep.textContent = '❌ ' + err.message;
+    if(analyseBtn) { analyseBtn.disabled = false; analyseBtn.style.opacity = '1'; }
+  }
+}
+
+function pollJobStatus(jobId){
+  const progressFill = document.getElementById('progressFill');
+  const progressStep = document.getElementById('progressStep');
+  const analyseBtn = document.getElementById('analyseBtn');
+
+  const interval = setInterval(async () => {
+    try{
+      const res = await fetch(`/api/jobs/${jobId}`);
+      const job = await res.json();
+
+      if(job.error && !job.status){
+        clearInterval(interval);
+        if(progressStep) progressStep.textContent = '❌ ' + job.error;
+        if(analyseBtn) { analyseBtn.disabled = false; analyseBtn.style.opacity = '1'; }
+        return;
+      }
+
+      const pct = Math.round((job.progress || 0) * 100);
+      if(progressFill) progressFill.style.width = pct + '%';
+      if(progressStep) progressStep.textContent = job.step || 'Analyse en cours…';
+
+      if(job.status === 'done'){
+        clearInterval(interval);
+        if(job.result && job.result.error){
+          if(progressStep) progressStep.textContent = '❌ ' + job.result.error;
+          if(analyseBtn) { analyseBtn.disabled = false; analyseBtn.style.opacity = '1'; }
+          return;
+        }
+        if(progressFill) progressFill.style.width = '100%';
+        if(progressStep) progressStep.textContent = 'Terminé ✓';
+        renderTimeline(job.result);
+      } else if(job.status === 'failed'){
+        clearInterval(interval);
+        if(progressStep) progressStep.textContent = '❌ ' + (job.error || 'Erreur lors de l\'analyse.');
+        if(analyseBtn) { analyseBtn.disabled = false; analyseBtn.style.opacity = '1'; }
+      }
+    }catch(err){
+      clearInterval(interval);
+      if(progressStep) progressStep.textContent = '❌ Erreur réseau pendant le suivi de la tâche.';
+      if(analyseBtn) { analyseBtn.disabled = false; analyseBtn.style.opacity = '1'; }
+    }
+  }, 900);
+}
+
+function renderTimeline(analysisData){
+  currentAnalysis = analysisData;
+  const results = document.getElementById('resultsSection');
+  const progressBox = document.getElementById('analysisProgress');
+  const globalTempo = document.getElementById('globalTempo');
+  const keyContent = document.getElementById('keyContent');
+  const chordContent = document.getElementById('chordContent');
+
+  if(globalTempo) globalTempo.textContent = `Tempo : ${Math.round(analysisData.tempo)} BPM`;
+  // On vide le contenu mais on conserve le repère de lecture (.playhead).
+  if(keyContent) keyContent.querySelectorAll('.timeline-segment').forEach(el => el.remove());
+  if(chordContent) chordContent.querySelectorAll('.timeline-segment').forEach(el => el.remove());
+
+  const totalDuration = Math.max(
+    ...(analysisData.key || []).map(s => s.end),
+    ...(analysisData.timeline || []).map(s => s.end),
+    currentSongDuration || 0,
+    1
+  );
+  currentSongDuration = totalDuration;
+
+  (analysisData.key || []).forEach((segment, i) => {
+    const el = document.createElement('div');
+    el.className = 'timeline-segment key-segment';
+    el.style.left = `${(segment.start / totalDuration) * 100}%`;
+    el.style.width = `${Math.max(((segment.end - segment.start) / totalDuration) * 100, 2)}%`;
+    el.style.background = i % 2 === 0 ? '#3f51b5' : '#5b6fd6';
+    el.textContent = segment.key;
+    el.title = `${segment.key} — ${formatTime(segment.start)} → ${formatTime(segment.end)}`;
+    el.dataset.start = segment.start;
+    el.onclick = () => seekAudioTo(segment.start);
+    keyContent.appendChild(el);
+  });
+
+  (analysisData.timeline || []).forEach(segment => {
+    const el = document.createElement('div');
+    el.className = 'timeline-segment chord-segment';
+    el.style.left = `${(segment.start / totalDuration) * 100}%`;
+    el.style.width = `${Math.max(((segment.end - segment.start) / totalDuration) * 100, 1.2)}%`;
+    el.style.background = chordColor(segment.chord);
+    el.textContent = segment.chord;
+    el.title = `${segment.chord} — ${formatTime(segment.start)} → ${formatTime(segment.end)}`;
+    el.dataset.start = segment.start;
+    el.dataset.end = segment.end;
+    el.onclick = () => seekAudioTo(segment.start);
+    chordContent.appendChild(el);
+  });
+
+  drawTempoCurve(analysisData.tempo_curve);
+
+  if(progressBox) progressBox.style.display = 'none';
+  if(results) results.style.display = 'block';
+
+  startTimelineSync();
+}
+
+function seekAudioTo(t){
+  if(!audio.src){
+    const page = document.getElementById('timelinePage');
+    if(page) playCatalogSong(parseInt(page.dataset.songId, 10), page.dataset.songTitle, page.dataset.songSrc);
+  }
+  if(isFinite(audio.duration) && audio.duration > 0){
+    audio.currentTime = Math.min(t, audio.duration);
+  } else {
+    audio.currentTime = t;
+  }
+  if(audio.paused) audio.play().catch(()=>{});
+}
+
+function drawTempoCurve(curve){
+  const canvas = document.getElementById('tempoCanvas');
+  if(!canvas || !curve || curve.length === 0) return;
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * devicePixelRatio;
+  canvas.height = rect.height * devicePixelRatio;
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const maxT = Math.max(...curve);
+  const minT = Math.min(...curve);
+  const stepX = w / Math.max(curve.length - 1, 1);
+
+  // Zone remplie sous la courbe
+  ctx.beginPath();
+  ctx.moveTo(0, h);
+  curve.forEach((tempo, i) => {
+    const x = i * stepX;
+    const y = h - (((tempo - minT) / (maxT - minT || 1)) * (h * 0.75) + h * 0.12);
+    ctx.lineTo(x, y);
+  });
+  ctx.lineTo(w, h);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, 'rgba(67,217,125,0.35)');
+  grad.addColorStop(1, 'rgba(67,217,125,0.02)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Ligne de la courbe
+  ctx.beginPath();
+  ctx.lineWidth = Math.max(2, w * 0.004);
+  ctx.strokeStyle = '#43D97D';
+  ctx.lineJoin = 'round';
+  curve.forEach((tempo, i) => {
+    const x = i * stepX;
+    const y = h - (((tempo - minT) / (maxT - minT || 1)) * (h * 0.75) + h * 0.12);
+    if(i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+}
+
+function startTimelineSync(){
+  if(timelineSyncRaf) cancelAnimationFrame(timelineSyncRaf);
+
+  function tick(){
+    timelineSyncRaf = requestAnimationFrame(tick);
+    if(!currentAnalysis) return;
+    const t = audio.currentTime || 0;
+    const duration = currentSongDuration || audio.duration || 1;
+    const pct = Math.min(100, (t / duration) * 100);
+
+    const phKey = document.getElementById('playheadKey');
+    const phChord = document.getElementById('playheadChord');
+    if(phKey) phKey.style.left = pct + '%';
+    if(phChord) phChord.style.left = pct + '%';
+
+    document.querySelectorAll('#keyContent .timeline-segment').forEach(el => {
+      el.classList.toggle('active-segment', parseFloat(el.dataset.start) <= t &&
+        (parseFloat(el.nextElementSibling?.dataset.start ?? Infinity) > t));
+    });
+    document.querySelectorAll('#chordContent .timeline-segment').forEach(el => {
+      const start = parseFloat(el.dataset.start), end = parseFloat(el.dataset.end);
+      el.classList.toggle('active-segment', t >= start && t < end);
+    });
+
+    const hint = document.getElementById('syncHint');
+    if(hint && !audio.paused){
+      hint.textContent = `Lecture en cours — ${formatTime(t)} / ${formatTime(duration)}`;
+    }
+  }
+  tick();
+}
+
+// Auto-restauration si l'analyse est déjà en cache côté serveur (voir
+// window.__CACHED_ANALYSIS__ injecté par timeline.html).
 document.addEventListener('DOMContentLoaded', () => {
-    const songGrid = document.getElementById('songGrid');
-    const timelineWrapper = document.getElementById('timelineWrapper');
+  const page = document.getElementById('timelinePage');
+  if(page && window.__CACHED_ANALYSIS__){
+    renderTimeline(window.__CACHED_ANALYSIS__);
+    const analyseBtn = document.getElementById('analyseBtn');
+    if(analyseBtn){ analyseBtn.textContent = "Relancer l'analyse"; }
+  }
 
-    // Initialisation Catalogue
-    if (songGrid) {
-        fetchSongs();
-    }
-
-    // Initialisation Timeline (si on est sur la page d'analyse)
-    if (timelineWrapper) {
-        const songId = new URLSearchParams(window.location.search).get('id');
-        if (songId) {
-            startAnalysis(songId);
-        }
-    }
+  // Grille catalogue : fetch dynamique optionnel (les cartes sont déjà
+  // rendues côté serveur par Jinja ; ce fetch ne sert qu'au champ de recherche).
+  const catalogSearch = document.getElementById('catalogSearch');
+  if(catalogSearch){
+    catalogSearch.addEventListener('input', () => {
+      const q = catalogSearch.value.trim().toLowerCase();
+      document.querySelectorAll('.song-card').forEach(card => {
+        const hay = (card.dataset.title + ' ' + card.dataset.artist).toLowerCase();
+        card.style.display = hay.includes(q) ? '' : 'none';
+      });
+    });
+  }
 });
-
-// --- CATALOGUE ---
-async function fetchSongs() {
-    try {
-        const response = await fetch(API_SONGS);
-        const data = await response.json();
-        renderCatalog(data.songs);
-    } catch (err) {
-        console.error("Erreur chargement catalogue", err);
-    }
-}
-
-function renderCatalog(songs) {
-    const grid = document.getElementById('songGrid');
-    grid.innerHTML = '';
-    songs.forEach(song => {
-        const card = document.createElement('div');
-        card.className = 'song-card';
-        card.innerHTML = `
-            <div class="cover-placeholder">♪</div>
-            <div class="song-info">
-                <h3>${song.title}</h3>
-                <button onclick="window.location.href='/timeline?id=${song.id}'">Analyser</button>
-            </div>
-        `;
-        grid.appendChild(card);
-    });
-}
-
-// --- ANALYSE & TIMELINE ---
-async function startAnalysis(songId) {
-    // 1. Lancer le job (asynchrone)
-    const response = await fetch(`/api/songs/${songId}/analyse/start`);
-    const data = await response.json();
-    
-    if (data.job_id) {
-        pollJobStatus(data.job_id);
-    }
-}
-
-async function pollJobStatus(jobId) {
-    const interval = setInterval(async () => {
-        const res = await fetch(`/api/jobs/${jobId}`);
-        const job = await res.json();
-        
-        if (job.status === 'finished') {
-            clearInterval(interval);
-            renderTimeline(job.result);
-        } else if (job.status === 'failed') {
-            clearInterval(interval);
-            alert("Erreur lors de l'analyse");
-        }
-    }, 1000);
-}
-
-function renderTimeline(analysisData) {
-    document.getElementById('globalTempo').textContent = `Tempo: ${analysisData.tempo} BPM`;
-    
-    const keyContent = document.getElementById('keyContent');
-    const chordContent = document.getElementById('chordContent');
-    
-    // Rendu des segments de tonalité (Modulation)
-    analysisData.key.forEach(segment => {
-        const width = (segment.end - segment.start) * PIXELS_PER_SECOND;
-        const left = segment.start * PIXELS_PER_SECOND;
-        
-        const el = document.createElement('div');
-        el.className = 'timeline-segment key-segment';
-        el.style.width = `${width}px`;
-        el.style.left = `${left}px`;
-        el.textContent = segment.key;
-        keyContent.appendChild(el);
-    });
-
-    // Rendu des accords (Lissage Viterbi)
-    analysisData.timeline.forEach(segment => {
-        const width = (segment.end - segment.start) * PIXELS_PER_SECOND;
-        const left = segment.start * PIXELS_PER_SECOND;
-        
-        const el = document.createElement('div');
-        el.className = 'timeline-segment chord-segment';
-        el.style.width = `${width}px`;
-        el.style.left = `${left}px`;
-        el.textContent = segment.chord;
-        chordContent.appendChild(el);
-    });
-
-    drawTempoCurve(analysisData.tempo_curve);
-}
-
-function drawTempoCurve(curve) {
-    const canvas = document.getElementById('tempoCanvas');
-    if (!canvas || !curve || curve.length === 0) return;
-    const ctx = canvas.getContext('2d');
-    
-    const maxT = Math.max(...curve);
-    const minT = Math.min(...curve);
-    const stepX = canvas.width / (curve.length - 1);
-    
-    ctx.beginPath();
-    ctx.strokeStyle = '#4CAF50';
-    ctx.lineWidth = 2;
-    
-    curve.forEach((tempo, i) => {
-        const x = i * stepX;
-        // Normaliser Y entre 10% et 90% de la hauteur du canvas
-        const y = canvas.height - ((tempo - minT) / (maxT - minT || 1) * (canvas.height * 0.8) + canvas.height * 0.1);
-        
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-}

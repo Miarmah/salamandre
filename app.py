@@ -328,13 +328,25 @@ def api_upload_song():
 # ---------------------------------------------------------------------------
 # Analyse asynchrone (Chapitre 4.2 §"Analyse asynchrone avec suivi de progression")
 # ---------------------------------------------------------------------------
-def _run_analysis_task(job_id, file_path):
+SONG_ANALYSIS_CACHE = {}
+_jobs_cache_passthrough = {}
+
+def _run_analysis_task(job_id, file_path, song_id=None):
     """Exécutée dans le pool de threads de jobs.py."""
-    update_progress(job_id, 0.1, "Chargement et prétraitement du fichier")
+    update_progress(job_id, 0.05, "Chargement et prétraitement du fichier")
+    update_progress(job_id, 0.25, "Détection du tempo")
+    update_progress(job_id, 0.5, "Détection de la tonalité (modulations)")
+    update_progress(job_id, 0.7, "Reconnaissance des accords (Viterbi)")
     result = analyse_song(file_path)
-    update_progress(job_id, 0.9, "Finalisation de la timeline")
+    update_progress(job_id, 0.95, "Finalisation de la timeline")
+    if song_id is not None and "error" not in (result or {}):
+        SONG_ANALYSIS_CACHE[song_id] = result
     return result
 
+def _catalog_song_path(song):
+    """Résout le chemin disque d'une chanson du catalogue (BD_songs.json
+    stocke un chemin relatif à static/, ex. 'songs/Adele.wav')."""
+    return os.path.join(app.static_folder, song["file"].strip())
 
 @app.route("/api/songs/<int:song_id>/analyse/start", methods=["GET"])
 def api_start_song_analysis(song_id):
@@ -346,9 +358,19 @@ def api_start_song_analysis(song_id):
     if not os.path.exists(file_path):
         return jsonify({"error": f"Fichier de la chanson introuvable : {file_path}"}), 404
 
-    job_id = submit_job(_run_analysis_task, file_path)
-    return jsonify({"job_id": job_id, "status": "queued"}), 202
+    # Analyse déjà en cache : on la ressert immédiatement sans relancer librosa.
+    cached = SONG_ANALYSIS_CACHE.get(song_id)
+    if cached is not None:
+        job_id = f"cached-{song_id}"
+        _jobs_cache_passthrough[job_id] = cached
+        return jsonify({"job_id": job_id, "status": "queued", "cached": True}), 202
 
+    file_path = _catalog_song_path(song)
+    if not os.path.exists(file_path):
+        return jsonify({"error": f"Fichier audio introuvable sur le serveur : static/{song['file']}"}), 404
+
+    job_id = submit_job(_run_analysis_task, file_path, song_id=song_id)
+    return jsonify({"job_id": job_id, "status": "queued"}), 202
 
 @app.route("/api/uploads/<upload_id>/analyse/start", methods=["GET"])
 @jwt_required()
@@ -366,10 +388,47 @@ def api_start_upload_analysis(upload_id):
 
 @app.route("/api/jobs/<job_id>", methods=["GET"])
 def api_get_job(job_id):
+    if job_id in _jobs_cache_passthrough:
+        return jsonify({
+            "status": "done", "progress": 1.0, "step": "Terminé (résultat en cache)",
+            "result": _jobs_cache_passthrough[job_id], "error": None,
+        })
     job = get_job(job_id)
     if job is None:
         return jsonify({"error": "Tâche inconnue"}), 404
     return jsonify(job)
+
+# ---------------------------------------------------------------------------
+# Catalogue — page de navigation (11 chansons) + page timeline d'analyse
+# ---------------------------------------------------------------------------
+@app.route("/catalog")
+@login_required
+def catalog():
+    songs = list(SONGS_BY_ID.values())
+    return render_template("catalog.html", songs=songs)
+
+
+@app.route("/timeline")
+@login_required
+def timeline_page():
+    song_id = request.args.get("id", type=int)
+    song = SONGS_BY_ID.get(song_id) if song_id is not None else None
+    if song is None:
+        flash("Chanson introuvable dans le catalogue.", "error")
+        return redirect(url_for("catalog"))
+
+    file_path = _catalog_song_path(song)
+    audio_exists = os.path.exists(file_path)
+    audio_src = url_for("static", filename=song["file"])
+    cached_result = SONG_ANALYSIS_CACHE.get(song_id)
+
+    return render_template(
+        "timeline.html",
+        song=song,
+        audio_src=audio_src,
+        audio_exists=audio_exists,
+        cached_result=cached_result,
+    )
 
 # ---------------------------------------------------------------------------
 # Onboarding / Auth routes
@@ -377,7 +436,7 @@ def api_get_job(job_id):
 @app.route("/")
 def onboarding():
     if "user_id" in session:
-        return redirect(url_for("library"))
+        return redirect(url_for("catalog"))
     return render_template("onboarding.html")
 
 
@@ -476,7 +535,7 @@ def login():
         next_url = request.args.get("next")
         if next_url and next_url.startswith("/"):
             return redirect(next_url)
-        return redirect(url_for("library"))
+        return redirect(url_for("catalog"))
 
     just_created = request.args.get("created")
     return render_template("login.html", error=None, just_created=just_created)
@@ -491,7 +550,7 @@ def logout():
 # Chargement du catalogue de chansons (BD_songs.json)
 # ---------------------------------------------------------------------------
 try:
-    with open("BD_songs.json", "r", encoding="utf-8") as f:
+    with open(os.path.join(BASE_DIR, "BD_songs.json"), "r", encoding="utf-8") as f:
         _catalog_data = json.load(f)
 except FileNotFoundError:
     print("Fichier BD_songs.json non trouvé. Assurez-vous qu'il existe et est au bon endroit.")
