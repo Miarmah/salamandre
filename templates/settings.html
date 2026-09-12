@@ -26,7 +26,7 @@
   <form method="POST" action="{{ url_for('settings_toggle') }}" onchange="this.submit()" style="margin-left:auto;">
     <input type="hidden" name="field" value="dark_mode">
     <label class="switch">
-      <input type="checkbox" {{ 'checked' if user['dark_mode'] else '' }} onclick="this.form.requestSubmit()">
+      <input type="checkbox" {% if user.dark_mode %}checked{% endif %} onclick="this.form.requestSubmit()">
       <span class="slider"></span>
     </label>
   </form>
@@ -42,15 +42,15 @@
     <div class="settings-sub">Alertes & rappels</div>
   </div>
   <form method="POST" action="{{ url_for('settings_toggle') }}" style="margin-left:auto;">
-    <input type="hidden" name="field" value="notifications">
-    <label class="switch">
-      <input type="checkbox" {{ 'checked' if user['notifications'] else '' }} onclick="this.form.requestSubmit()">
-      <span class="slider"></span>
-    </label>
-  </form>
+  <input type="hidden" name="field" value="notifications">
+  <label class="switch">
+    <input type="checkbox" {% if user.notifications %}checked{% endif %} onclick="this.form.requestSubmit()">
+    <span class="slider"></span>
+  </label>
+</form>
 </div>
 
-<div class="settings-card" style="cursor:pointer;" onclick="window.location.href='{{ url_for('stats') }}'">
+<div class="settings-card" style="cursor:pointer;" onclick="window.location.href={{ url_for('stats')|tojson|safe }}">
   <div class="settings-icon" style="background:var(--green-pale); color:var(--green);">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
   </div>

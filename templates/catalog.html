@@ -35,10 +35,10 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
         Écouter
       </button>
-      <button class="btn small outline" onclick="window.location.href='{{ url_for('timeline_page', id=song.id) }}'">
+      <a class="btn small outline" href="{{ url_for('timeline_page', id=song.id) }}">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 3 5-7"/></svg>
-        Analyser
-      </button>
+      Analyser
+      </a>
     </div>
   </div>
   {% endfor %}

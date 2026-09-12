@@ -1,36 +1,80 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="analysis-container">
-    <header class="analysis-header">
-        <h1 id="songTitle">Analyse en cours...</h1>
-        <div class="meta-info">
-            <span id="globalTempo" class="badge">Tempo: -- BPM</span>
-            <span id="globalKey" class="badge">Tonalité globale: --</span>
-        </div>
-    </header>
+<div class="analysis-container" id="timelinePage"
+     data-item-kind="{{ item_kind }}"
+     data-item-id="{{ item_id }}"
+     data-item-title="{{ title|e }}"
+     data-item-src="{{ audio_src }}">
 
-    <div class="player-controls">
-        <audio id="audioPlayer" controls></audio>
+  <div class="header-row" style="align-items:center;">
+    <a href="{{ back_url }}" class="icon-btn" title="{{ back_label }}">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    </a>
+    <div style="flex:1; margin-left:12px;">
+      <h1 class="page-title" style="font-size:24px; margin-bottom:0;">{{ title }}</h1>
+      <p class="page-sub" style="margin:2px 0 0;">{{ subtitle }}</p>
     </div>
+  </div>
 
-    <!-- Conteneur principal de la timeline -->
-    <div class="timeline-wrapper" id="timelineWrapper">
-        <div class="playhead" id="playhead"></div>
-        
-        <div class="timeline-track" id="keyTrack">
-            <div class="track-label">Tonalités</div>
-            <div class="track-content" id="keyContent"></div>
-        </div>
-        
-        <div class="timeline-track" id="chordTrack">
-            <div class="track-label">Accords</div>
-            <div class="track-content" id="chordContent"></div>
-        </div>
-    </div>
-    
+  <div class="meta-info" style="margin: 4px 0 18px;">
+    {% if badge_label %}<span class="badge">{{ badge_label }}</span>{% endif %}
+    <span class="badge" id="globalTempo">Tempo : —</span>
+  </div>
+
+  {% if not audio_exists %}
+  <div class="error-box">{{ missing_file_msg }}</div>
+  {% endif %}
+
+  <div class="action-row">
+    <button class="btn" id="listenBtn" {{ 'disabled style="opacity:.5;cursor:not-allowed;"' if not audio_exists else '' }} onclick="playCatalogSong({{ item_id|tojson }}, {{ title|tojson }}, {{ audio_src|tojson }}, '{{ item_kind }}')">
+      <svg id="listenBtnIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <span id="listenBtnLabel">Écouter</span>
+    </button>
+    <button class="btn outline" id="analyseBtn" {{ 'disabled style="opacity:.5;cursor:not-allowed;"' if not audio_exists else '' }} onclick="startAnalysis({{ item_id|tojson }}, '{{ item_kind }}')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 3 5-7"/></svg>
+      Lancer l'analyse
+    </button>
+  </div>
+
+  <div class="analysis-progress" id="analysisProgress" style="display:none;">
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%;"></div></div>
+    <p class="progress-step" id="progressStep">En attente…</p>
+  </div>
+
+  <div id="resultsSection" style="display:none;">
+
+    <h2 class="section-title">Progression de tempo</h2>
     <div class="tempo-curve-container">
-        <h3>Courbe de Tempo (Dynamique)</h3>
-        <canvas id="tempoCanvas" width="800" height="150"></canvas>
+      <canvas id="tempoCanvas" width="600" height="120" style="width:100%; height:120px;"></canvas>
     </div>
+
+    <h2 class="section-title">Tonalité &amp; modulations</h2>
+    <div class="timeline-wrapper" id="timelineWrapperKey">
+      <div class="timeline-track">
+        <div class="track-label">Tonalité</div>
+        <div class="track-content" id="keyContent">
+          <div class="playhead" id="playheadKey"></div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="section-title">Accords</h2>
+    <div class="timeline-wrapper" id="timelineWrapperChords">
+      <div class="timeline-track">
+        <div class="track-label">Accords</div>
+        <div class="track-content" id="chordContent">
+          <div class="playhead" id="playheadChord"></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="hint" id="syncHint">Lancez la lecture avec « Écouter » : l'accord et la tonalité en cours seront surlignés automatiquement.</p>
+  </div>
+
 </div>
+{% if cached_result %}
+<script>
+  window.__CACHED_ANALYSIS__ = {{ cached_result|tojson }};
+</script>
+{% endif %}
 {% endblock %}

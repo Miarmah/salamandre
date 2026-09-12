@@ -329,6 +329,7 @@ def api_upload_song():
 # Analyse asynchrone (Chapitre 4.2 §"Analyse asynchrone avec suivi de progression")
 # ---------------------------------------------------------------------------
 SONG_ANALYSIS_CACHE = {}
+TRACK_ANALYSIS_CACHE = {}
 _jobs_cache_passthrough = {}
 
 def _run_analysis_task(job_id, file_path, song_id=None):
@@ -385,6 +386,28 @@ def api_start_upload_analysis(upload_id):
     job_id = submit_job(_run_analysis_task, upload["file_path"])
     return jsonify({"job_id": job_id, "status": "queued"}), 202
 
+@app.route("/api/tracks/<int:track_id>/analyse/start", methods=["GET"])
+@login_required
+def api_start_track_analysis(track_id):
+    db = get_db()
+    track = db.execute(
+        "SELECT * FROM tracks WHERE id = ? AND user_id = ?", (track_id, session["user_id"])
+    ).fetchone()
+    if track is None:
+        return jsonify({"error": "Morceau introuvable ou accès refusé"}), 404
+
+    cached = TRACK_ANALYSIS_CACHE.get(track_id)
+    if cached is not None:
+        job_id = f"cached-track-{track_id}"
+        _jobs_cache_passthrough[job_id] = cached
+        return jsonify({"job_id": job_id, "status": "queued", "cached": True}), 202
+
+    file_path = os.path.join(UPLOAD_DIR, track["filename"])
+    if not os.path.exists(file_path):
+        return jsonify({"error": "Fichier audio introuvable sur le serveur."}), 404
+
+    job_id = submit_job(_run_analysis_task, file_path, track_id=track_id)
+    return jsonify({"job_id": job_id, "status": "queued"}), 202
 
 @app.route("/api/jobs/<job_id>", methods=["GET"])
 def api_get_job(job_id):
@@ -424,9 +447,52 @@ def timeline_page():
 
     return render_template(
         "timeline.html",
-        song=song,
+        item_kind="song",
+        item_id=song_id,
+        title=song["title"],
+        subtitle=song["artist"],
+        badge_label="Malagasy" if song["category"] == "malagasy" else "Étrangère",
+        back_url=url_for("catalog"),
+        back_label="Retour au catalogue",
         audio_src=audio_src,
         audio_exists=audio_exists,
+        missing_file_msg=(
+            f"Le fichier audio de ce morceau est introuvable sur le serveur "
+            f"(static/{song['file']}). L'écoute et l'analyse ne fonctionneront "
+            f"pas tant qu'il n'est pas ajouté à cet emplacement."
+        ),
+        cached_result=cached_result,
+    )
+
+@app.route("/timeline/track/<int:track_id>")
+@login_required
+def timeline_track_page(track_id):
+    db = get_db()
+    track = db.execute(
+        "SELECT * FROM tracks WHERE id = ? AND user_id = ?", (track_id, session["user_id"])
+    ).fetchone()
+    if track is None:
+        flash("Morceau introuvable dans votre bibliothèque.", "error")
+        return redirect(url_for("library"))
+
+    file_path = os.path.join(UPLOAD_DIR, track["filename"])
+    audio_exists = os.path.exists(file_path)
+    audio_src = url_for("uploaded_file", filename=track["filename"])
+    cached_result = TRACK_ANALYSIS_CACHE.get(track_id)
+
+    return render_template(
+        "timeline.html",
+        item_kind="track",
+        item_id=track_id,
+        title=track["title"],
+        subtitle="Importé dans votre bibliothèque",
+        badge_label=None,
+        back_url=url_for("library"),
+        back_label="Retour à la bibliothèque",
+        audio_src=audio_src,
+        audio_exists=audio_exists,
+        missing_file_msg="Le fichier audio de ce morceau est introuvable sur le serveur. "
+                          "Réimportez-le depuis la bibliothèque.",
         cached_result=cached_result,
     )
 

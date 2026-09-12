@@ -25,12 +25,12 @@
   {% endif %}
 
   <div class="action-row">
-    <button class="btn" id="listenBtn" {{ 'disabled style="opacity:.5;cursor:not-allowed;"' if not audio_exists else '' }} onclick="playCatalogSong({{ song.id }}, '{{ song.title|e }}', '{{ audio_src }}')">
+    <button class="btn" id="listenBtn" {{% if not audio_exists %}disabled style="opacity:.5;cursor:not-allowed;"{% endif %}} onclick="playCatalogSong('{{ song.id }}','{{ song.title|tojson|safe }}', '{{ audio_src|tojson|safe }}')">
       <svg id="listenBtnIcon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
       <span id="listenBtnLabel">Écouter</span>
     </button>
-    <button class="btn outline" id="analyseBtn" {{ 'disabled style="opacity:.5;cursor:not-allowed;"' if not audio_exists else '' }} onclick="startAnalysis({{ song.id }})">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 3 5-7"/></svg>
+    <button class="btn outline" id="analyseBtn" {{% if not audio_exists %}disabled style="opacity:.5;cursor:not-allowed;"{% endif %}} onclick="startAnalysis('{{ song.id }}')>
+      <svg width='18" height='18' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'><path d='M3 3v18h18'/><path d="M7 15l3-4 3 3 5-7"/></svg>
       Lancer l'analyse
     </button>
   </div>
@@ -69,11 +69,10 @@
 
     <p class="hint" id="syncHint">Lancez la lecture avec « Écouter » : l'accord et la tonalité en cours seront surlignés automatiquement.</p>
   </div>
-
 </div>
 {% if cached_result %}
 <script>
-  window.__CACHED_ANALYSIS__ = {{ cached_result|tojson }};
+  window.__CACHED_ANALYSIS__ = {{ cached_result|tojson|safe }};
 </script>
 {% endif %}
 {% endblock %}

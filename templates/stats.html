@@ -39,7 +39,7 @@
       <span style="font-weight:800; color:var(--green); font-size:14px;">{{ t['play_count'] }} écoute{{ 's' if t['play_count'] != 1 else '' }}</span>
     </div>
     <div style="height:8px; background:var(--bg-soft); border-radius:4px; overflow:hidden;">
-      <div style="height:100%; width:{{ (t['play_count'] / max_plays * 100) if max_plays else 0 }}%; background:var(--green-bright); border-radius:4px;"></div>
+      <div style="height:100%; width:{{ (t.play_count / max_plays * 100) if max_plays else 0 }}%; background:var(--green-bright); border-radius:4px;"></div>
     </div>
   </div>
   {% endfor %}

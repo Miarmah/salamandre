@@ -23,7 +23,7 @@
     </span>
     <button class="track-play {{ 'has-cover' if t['cover_filename'] else '' }}"
             {% if t['cover_filename'] %}style="background-image:url('{{ url_for('cover_file', filename=t['cover_filename']) }}');"{% endif %}
-            onclick="playQueueItem(window.pageTracks, {{ loop.index0 }})">
+            onclick="playQueueItem(window.pageTracks, {{ loop[index0] }})">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
     </button>
     <div class="track-info">

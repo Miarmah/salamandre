@@ -567,8 +567,12 @@ function loadAndPlayDirect(id, src, title, cover){
   updateCoverArt();
 }
 
-function playCatalogSong(id, title, src){
-  playQueueItem([{ id: `cat-${id}`, title, filename: null, cover: null, _directSrc: src }], 0);
+function playCatalogSong(id, title, src, kind){
+  // Les morceaux importés (kind === 'track') utilisent leur vrai id numérique
+  // pour que /track/<id>/play soit appelé (compteur d'écoutes) ; les chansons
+  // du catalogue utilisent un id préfixé car elles n'ont pas d'entrée en base.
+  const queueId = kind === 'track' ? id : `cat-${id}`;
+  playQueueItem([{ id: queueId, title, filename: null, cover: null, _directSrc: src }], 0);
   syncListenButton();
 }
 

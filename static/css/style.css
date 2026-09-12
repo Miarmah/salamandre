@@ -426,7 +426,7 @@ button {
 
 .badge-pro{ background: var(--green-pale); color:var(--green); font-weight:800; font-size:12.5px; padding: 6px 14px; border-radius: var(--radius-pill); margin-left:auto; }
 
-.switch{ position:relative; width:48px; height:28px; margin-left:auto; flex-shrink:0; }
+.switch{ position:relative; width:48px; height:28px; margin-left:auto; flex-shrink:0; display:inline-block; }
 .switch input{ opacity:0; width:0; height:0; }
 .slider{
   position:absolute; inset:0; background:#d9d2c0; border-radius: 999px; cursor:pointer; transition:.2s;
@@ -617,3 +617,9 @@ button {
 }
 
 .hint{ text-align:center; }
+
+/* Icône "Analyser" mise en avant dans la liste des morceaux importés
+   (mêmes fonctions que le catalogue : Écouter via le bouton de lecture,
+   Analyser via cette icône). */
+.icon-mini.analyse-mini{ color: var(--green); }
+.icon-mini.analyse-mini:hover{ color: var(--green-bright); }
